@@ -1,0 +1,6 @@
+com/pagepulse/PagePulseApplication.class
+com/pagepulse/controller/AuditController.class
+com/pagepulse/service/AuditService.class
+com/pagepulse/model/AuditReport.class
+com/pagepulse/model/ErrorResponse.class
+com/pagepulse/exception/AuditException.class

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Page Pulse — URL Auditor</title>
+  <meta name="description" content="Page Pulse audits any URL and returns an instant SEO and performance report: HTTP status, response time, title, meta description, H1 count, image alt coverage, and word count." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ===================================================================
+       Design Tokens & Reset
+    =================================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --clr-bg:        #0d0f14;
+      --clr-surface:   #13161e;
+      --clr-card:      #1a1e2a;
+      --clr-border:    rgba(255,255,255,0.07);
+      --clr-text:      #e8eaf0;
+      --clr-muted:     #8890a4;
+      --clr-accent:    #7c6af7;
+      --clr-accent-lt: #a99ff8;
+      --clr-green:     #34d399;
+      --clr-yellow:    #fbbf24;
+      --clr-red:       #f87171;
+      --clr-blue:      #60a5fa;
+      --radius-sm:     6px;
+      --radius-md:     12px;
+      --radius-lg:     18px;
+      --shadow-card:   0 4px 32px rgba(0,0,0,0.4);
+      --transition:    0.2s ease;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--clr-bg);
+      color: var(--clr-text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.6;
+    }
+
+    /* ===================================================================
+       Animated background gradient
+    =================================================================== */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% -20%, rgba(124,106,247,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 120%, rgba(96,165,250,0.1) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ===================================================================
+       Layout
+    =================================================================== */
+    main {
+      flex: 1;
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 3rem 1.25rem 4rem;
+    }
+
+    /* ===================================================================
+       Header
+    =================================================================== */
+    .header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--clr-accent) 0%, var(--clr-blue) 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      box-shadow: 0 4px 20px rgba(124,106,247,0.4);
+    }
+
+    h1 {
+      font-size: clamp(1.8rem, 5vw, 2.5rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff 30%, var(--clr-accent-lt) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      color: var(--clr-muted);
+      font-size: 0.95rem;
+      font-weight: 400;
+    }
+
+    /* ===================================================================
+       Search Card
+    =================================================================== */
+    .search-card {
+      background: var(--clr-surface);
+      border: 1px solid var(--clr-border);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(12px);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    #url-input {
+      flex: 1;
+      background: var(--clr-bg);
+      border: 1px solid var(--clr-border);
+      border-radius: var(--radius-md);
+      padding: 0.8rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      color: var(--clr-text);
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    #url-input::placeholder { color: var(--clr-muted); }
+
+    #url-input:focus {
+      border-color: var(--clr-accent);
+      box-shadow: 0 0 0 3px rgba(124,106,247,0.2);
+    }
+
+    #audit-btn {
+      background: linear-gradient(135deg, var(--clr-accent) 0%, #5b4de0 100%);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 0.8rem 1.5rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity var(--transition), transform var(--transition), box-shadow var(--transition);
+      box-shadow: 0 4px 16px rgba(124,106,247,0.35);
+    }
+
+    #audit-btn:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(124,106,247,0.5);
+    }
+
+    #audit-btn:active { transform: translateY(0); }
+
+    #audit-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ===================================================================
+       Spinner (shown inside button while loading)
+    =================================================================== */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===================================================================
+       Error message
+    =================================================================== */
+    #error-msg {
+      display: none;
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: rgba(248,113,113,0.1);
+      border: 1px solid rgba(248,113,113,0.25);
+      border-radius: var(--radius-sm);
+      color: var(--clr-red);
+      font-size: 0.875rem;
+    }
+
+    #error-msg.visible { display: flex; align-items: flex-start; gap: 0.5rem; }
+
+    /* ===================================================================
+       Results Section
+    =================================================================== */
+    #results {
+      display: none;
+      margin-top: 1.5rem;
+    }
+
+    #results.visible { display: block; }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .results-url {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--clr-muted);
+      word-break: break-all;
+    }
+
+    /* Status badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.3px;
+    }
+
+    .status-badge.ok   { background: rgba(52,211,153,0.12); color: var(--clr-green); border: 1px solid rgba(52,211,153,0.25); }
+    .status-badge.warn { background: rgba(251,191,36,0.12);  color: var(--clr-yellow); border: 1px solid rgba(251,191,36,0.25); }
+    .status-badge.err  { background: rgba(248,113,113,0.12); color: var(--clr-red);   border: 1px solid rgba(248,113,113,0.25); }
+
+    /* Grid of metric cards */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.875rem;
+    }
+
+    .metric-card {
+      background: var(--clr-card);
+      border: 1px solid var(--clr-border);
+      border-radius: var(--radius-md);
+      padding: 1.1rem 1.2rem;
+      transition: transform var(--transition), border-color var(--transition);
+      animation: fadeSlide 0.3s ease both;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(124,106,247,0.3);
+    }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Stagger animation for cards */
+    .metric-card:nth-child(1)  { animation-delay: 0.05s; }
+    .metric-card:nth-child(2)  { animation-delay: 0.10s; }
+    .metric-card:nth-child(3)  { animation-delay: 0.15s; }
+    .metric-card:nth-child(4)  { animation-delay: 0.20s; }
+    .metric-card:nth-child(5)  { animation-delay: 0.25s; }
+    .metric-card:nth-child(6)  { animation-delay: 0.30s; }
+    .metric-card:nth-child(7)  { animation-delay: 0.35s; }
+
+    .metric-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--clr-muted);
+      font-weight: 500;
+      margin-bottom: 0.4rem;
+    }
+
+    .metric-value {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--clr-text);
+      line-height: 1.2;
+    }
+
+    .metric-value.mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+    }
+
+    .metric-value.text-value {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: var(--clr-text);
+      word-break: break-word;
+    }
+
+    .metric-value.muted  { color: var(--clr-muted); font-size: 0.85rem; font-style: italic; }
+    .metric-value.good   { color: var(--clr-green); }
+    .metric-value.caution{ color: var(--clr-yellow); }
+    .metric-value.bad    { color: var(--clr-red); }
+
+    /* Wide card spans full row */
+    .metric-card.wide {
+      grid-column: 1 / -1;
+    }
+
+    /* ===================================================================
+       Footer
+    =================================================================== */
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 1.5rem 1.25rem;
+      border-top: 1px solid var(--clr-border);
+      color: var(--clr-muted);
+      font-size: 0.8rem;
+    }
+
+    footer a {
+      color: var(--clr-accent-lt);
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+
+    footer a:hover { color: #fff; }
+
+    /* ===================================================================
+       Responsive
+    =================================================================== */
+    @media (max-width: 520px) {
+      .input-row { flex-direction: column; }
+      #audit-btn { width: 100%; justify-content: center; }
+      .metrics-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 360px) {
+      .metrics-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <!-- ===== Header ===== -->
+    <header class="header">
+      <div class="logo-row">
+        <div class="logo-icon" aria-hidden="true">📡</div>
+        <h1>Page Pulse</h1>
+      </div>
+      <p class="tagline">Instant SEO &amp; performance audit for any URL</p>
+    </header>
+
+    <!-- ===== Search Card ===== -->
+    <section class="search-card" aria-label="Audit form">
+      <div class="input-row">
+        <label for="url-input" class="sr-only">URL to audit</label>
+        <input
+          id="url-input"
+          type="url"
+          placeholder="https://example.com"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="URL to audit"
+        />
+        <button id="audit-btn" type="button">Run Audit</button>
+      </div>
+
+      <!-- Inline error message — never a browser alert -->
+      <div id="error-msg" role="alert" aria-live="polite">
+        <span aria-hidden="true">⚠️</span>
+        <span id="error-text"></span>
+      </div>
+    </section>
+
+    <!-- ===== Results ===== -->
+    <section id="results" aria-label="Audit results" aria-live="polite">
+      <div class="results-header">
+        <span id="audited-url" class="results-url"></span>
+        <span id="status-badge" class="status-badge"></span>
+      </div>
+
+      <div class="metrics-grid" id="metrics-grid">
+        <!-- Cards are injected by JS -->
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer>
+    <p>Built for <a href="https://digitalheroesco.com" target="_blank" rel="noopener noreferrer">Digital Heroes Training Task</a></p>
+  </footer>
+
+  <!-- Visually hidden helper for screen readers -->
+  <style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
+
+  <script>
+    /* =====================================================================
+       Page Pulse — Frontend Logic
+       Calls GET /audit?url=<url> and renders the JSON report.
+    ===================================================================== */
+
+    const urlInput  = document.getElementById('url-input');
+    const auditBtn  = document.getElementById('audit-btn');
+    const errorMsg  = document.getElementById('error-msg');
+    const errorText = document.getElementById('error-text');
+    const results   = document.getElementById('results');
+    const metricsGrid = document.getElementById('metrics-grid');
+    const statusBadge = document.getElementById('status-badge');
+    const auditedUrl  = document.getElementById('audited-url');
+
+    // Allow submitting with Enter key
+    urlInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') runAudit();
+    });
+
+    auditBtn.addEventListener('click', runAudit);
+
+    async function runAudit() {
+      const url = urlInput.value.trim();
+
+      // Client-side quick check — blank field
+      if (!url) {
+        showError('Please enter a URL before running the audit.');
+        return;
+      }
+
+      setLoading(true);
+      hideError();
+      hideResults();
+
+      try {
+        const response = await fetch(`/audit?url=${encodeURIComponent(url)}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          // Backend returned a clean JSON error — show the message
+          showError(data.error || 'An unknown error occurred.');
+          return;
+        }
+
+        renderResults(url, data);
+      } catch (err) {
+        // Network failure (server down, CORS, etc.)
+        showError('Could not reach the audit server. Is it running?');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    /* -----------------------------------------------------------------------
+       Rendering
+    ----------------------------------------------------------------------- */
+
+    function renderResults(url, report) {
+      // Audited URL
+      auditedUrl.textContent = url;
+
+      // HTTP Status badge — colour-coded
+      const code = report.httpStatus;
+      let badgeClass = 'ok';
+      if (code >= 400 && code < 500) badgeClass = 'warn';
+      if (code >= 500)               badgeClass = 'err';
+      statusBadge.className = `status-badge ${badgeClass}`;
+      statusBadge.innerHTML = `<span>${httpEmoji(code)}</span> HTTP ${code}`;
+
+      // Build metric cards
+      metricsGrid.innerHTML = '';
+
+      addCard('Response Time',
+        `${report.responseTimeMs} ms`,
+        speedClass(report.responseTimeMs),
+        'mono'
+      );
+
+      addCard('H1 Tags',
+        report.h1Count,
+        h1Class(report.h1Count)
+      );
+
+      addCard('Total Images',
+        report.totalImages
+      );
+
+      addCard('Missing Alt',
+        report.imagesMissingAlt,
+        altClass(report.imagesMissingAlt, report.totalImages)
+      );
+
+      addCard('Word Count',
+        report.wordCount
+      );
+
+      // Title — wide card
+      addCard('Page Title',
+        report.title || '(none)',
+        report.title ? '' : 'caution',
+        'text-value',
+        true  // wide
+      );
+
+      // Meta Description — wide card
+      const metaVal  = report.metaDescription !== null ? report.metaDescription : null;
+      addCard('Meta Description',
+        metaVal !== null ? metaVal : '— not set —',
+        metaVal !== null ? 'text-value' : 'muted',
+        metaVal !== null ? 'text-value' : 'muted',
+        true  // wide
+      );
+
+      showResults();
+    }
+
+    /**
+     * Appends a metric card to the grid.
+     * @param {string}  label    - Card title
+     * @param {*}       value    - Displayed value
+     * @param {string}  [cls]    - Extra CSS class on the value span (good/caution/bad/muted)
+     * @param {string}  [extra]  - Additional CSS class (e.g. "mono", "text-value")
+     * @param {boolean} [wide]   - If true, the card spans the full row
+     */
+    function addCard(label, value, cls = '', extra = '', wide = false) {
+      const card = document.createElement('div');
+      card.className = 'metric-card' + (wide ? ' wide' : '');
+
+      const valueClass = ['metric-value', cls, extra].filter(Boolean).join(' ');
+
+      card.innerHTML = `
+        <div class="metric-label">${escHtml(label)}</div>
+        <div class="${valueClass}">${escHtml(String(value))}</div>
+      `;
+      metricsGrid.appendChild(card);
+    }
+
+    /* -----------------------------------------------------------------------
+       Colour-coding helpers
+    ----------------------------------------------------------------------- */
+
+    function speedClass(ms) {
+      if (ms < 500)  return 'good';
+      if (ms < 1500) return 'caution';
+      return 'bad';
+    }
+
+    function h1Class(count) {
+      if (count === 1) return 'good';
+      if (count === 0) return 'bad';
+      return 'caution'; // multiple H1s is an SEO issue
+    }
+
+    function altClass(missing, total) {
+      if (total === 0 || missing === 0) return 'good';
+      if (missing < total)              return 'caution';
+      return 'bad';
+    }
+
+    function httpEmoji(code) {
+      if (code >= 200 && code < 300) return '✅';
+      if (code >= 300 && code < 400) return '↪️';
+      if (code >= 400 && code < 500) return '⚠️';
+      return '❌';
+    }
+
+    /* -----------------------------------------------------------------------
+       UI state helpers
+    ----------------------------------------------------------------------- */
+
+    function setLoading(on) {
+      auditBtn.disabled = on;
+      auditBtn.innerHTML = on
+        ? '<span class="spinner"></span>Auditing…'
+        : 'Run Audit';
+    }
+
+    function showError(msg) {
+      errorText.textContent = msg;
+      errorMsg.classList.add('visible');
+    }
+
+    function hideError() {
+      errorMsg.classList.remove('visible');
+    }
+
+    function showResults() {
+      results.classList.add('visible');
+      // Scroll results into view on mobile
+      results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function hideResults() {
+      results.classList.remove('visible');
+      metricsGrid.innerHTML = '';
+    }
+
+    /** Simple HTML-escape to prevent XSS from returned page titles etc. */
+    function escHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
